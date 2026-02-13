@@ -1,6 +1,104 @@
 # 🎅 SANTA: Scalable Accelerator for Nonlinear function with Tree-based Architecture
 
 > **[2026 POLARIS Semiconductor Innovation Festival (SIF)](https://polargate.disu.ac.kr/contest/SIF2026/winner?sc=y)**
+> Team-People of the Approximation (근사한사람들)
+
+## Introduction
+SANTA is an FPGA-based hardware accelerator designed to speed up the Softmax nonlinear function, a key bottleneck in Transformer-based language models (BERT, GPT, etc.).
+
+Modern AI services must handle a wide range of input lengths, from short queries (e.g., voice assistants) to long contexts (e.g., LLMs).
+Conventional fixed-size accelerators either waste computation on short inputs due to unnecessary padding, or fail to support long inputs beyond their fixed capacity.
+
+**SANTA** addresses these limitations using a **Tree-based Architecture** and **Forwarding Logic**.
+- Speed: Maximizes processing speed for short queries by parallelizing the computation.
+- Scalability: Flexibly supports long inputs up to 768 tokens beyond the physical hardware size constraint.
+
+## Key Features
+
+### 1. Tree-Bypass Logic (Parallel Acceleration)
+Dynamically reconfigures hardware resources according to input length.
+- Variable-length modes: Operates in `16x4`, `32x2`, and `64x1` modes depending on the input length.
+- Parallel processing: For short sentences with 16 tokens or fewer, it runs
+  four Softmax computations in parallel, improving throughput by **2.2×** (SST-2 Validation Set).
+
+### 2. Forwarding Logic (Infinite Scalability)
+A structure that can process long sequences beyond the physical buffer size (64-input).
+- Local-to-Global Update: For each data batch, the locally computed Max/Sum values are forwarded to the next batch to derive the global Softmax result.
+- Flexibility: This enables processing up to the maximum input length of GPT/BERT (768 tokens), and in theory, unlimited sequence lengths.
+
+### 3. Hardware-Efficient Approximation (RU)
+Optimizes expensive exponential and division operations into hardware-friendly forms.
+- Q6.10 Fixed-Point: Uses fixed-point instead of floating-point to reduce hardware cost.
+- Base-2 Transformation: Uses base-2 logarithm and exponential instead of natural log/exp, replacing complex operations with simple shift-and-add.
+- Resource Efficiency: Achieves **50%** LUT/FF reduction and **27%** power reduction compared to an FP16 design, and uses **zero DSP slices**.
+
+## System Architecture
+
+The overall system operates via a Host-Accelerator hybrid flow:
+1.  Host PC (Web UI): Receives user text input (GPT-2/BERT).
+2.  Softmax HW API: Extracts only the Softmax operation from the PyTorch attention layer and sends it over UART.
+3.  SANTA Chip (FPGA):
+    - UART Module: Receives and buffers data.
+    - Core: Max Tree -> Forwarding -> RU (Exp) -> Adder Tree -> Forwarding -> RU (Div).
+4.  Output: Returns the results to the Host, which then produces the final text generation or sentiment classification output.
+
+| Component | Specification |
+|:---:|:---|
+| Board | Nexys A7-100T (Xilinx Artix-7) |
+| Interface | UART (Universal Asynchronous Receiver-Transmitter) |
+| Frequency | 100 MHz |
+| Precision | Fixed-Point Q6.10 |
+
+## Performance Evaluation
+
+Verification was conducted using a BERT-Base model and the SST-2 (Stanford Sentiment Treebank) dataset.
+
+| Metric | SW (PyTorch FP32) | HW (SANTA Q6.10) | Note |
+|:---|:---:|:---:|:---|
+| Accuracy | 92.4% | 92.2% | Maintains FP32-level accuracy |
+| Agreement | - | 99.8% | 99.8% match with float SW outputs |
+| Throughput | 1.0x (Baseline) | 2.2x | Acceleration for short sentences (Avg 25 tokens) |
+
+## Demo
+*In the real demo environment, a Python FastAPI-based web interface was used to visualize the hardware operation.*
+
+| Model | Input Example | Result |
+|:---|:---|:---|
+| Text Generation (GPT-2) | `Hi nice to` | Generates `meet you.` (Hardware-accelerated) |
+| Sentiment Analysis (BERT) | `I love you` | Classified as POSITIVE |
+
+## Team-People of the Approximation (근사한사람들)
+- Sanghyeok Park (박상혁)
+  - **Leader**
+  - Idea Conception
+  - System Architecture
+  - RTL Design
+  - Approximation Algorithm
+  - FPGA Implementation
+  - Verification
+  - Software Integration
+  - Host API Development
+  - Figure Illustrations
+- Sang-yoon Kim (김상윤)
+  - RTL Design
+  - UI/UX Design
+  - Web API Development
+  - Software Integration
+  - Figure Illustrations
+- Seo-yoon Jang (장서윤)
+  - RTL Design
+  - UI/UX Design
+  - Figure Illustrations
+  - Documentation
+
+---
+*This project was submitted to POLARIS SIF 2026.*
+
+---
+
+# Korean Version: 🎅 SANTA: 트리 기반 고확장성 비선형 연산 가속기 설계 및 검증
+
+> **[2026 POLARIS Semiconductor Innovation Festival (SIF)](https://polargate.disu.ac.kr/contest/SIF2026/winner?sc=y)**
 > Team-근사한사람들 (People of the Approximation)
 
 ## Introduction
